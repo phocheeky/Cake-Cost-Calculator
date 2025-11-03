@@ -54,6 +54,7 @@
     .catch(() => {
       document.getElementById('version-number').textContent = 'unknown';
     });
+    
     let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
     const params = new URLSearchParams(window.location.search);
     const cakeIndex = parseInt(params.get('cake'), 10);
