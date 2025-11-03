@@ -23,6 +23,9 @@
       <button onclick="addIngredient()" class="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition">Add Ingredient</button>
     </div>
 
+    <!-- Ingredient List Table -->
+    <div id="ingredientTableContainer" class="mb-8"></div>
+
     <!-- Recipe Section -->
     <div>
       <h2 class="text-lg font-semibold mb-3">Recipe</h2>
@@ -30,6 +33,7 @@
       <input id="recipeQuantity" type="number" step="0.01" placeholder="Quantity used" class="border rounded-lg w-full p-2 mb-2" />
       <button onclick="addToRecipe()" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">Add to Recipe</button>
 
+      <!-- Recipe Table -->
       <table class="w-full mt-6 border-collapse text-sm">
         <thead class="bg-gray-100">
           <tr>
@@ -42,8 +46,18 @@
         <tbody id="recipeTableBody"></tbody>
       </table>
 
+      <!-- Total Cost -->
       <h3 class="text-right text-lg font-semibold mt-4">
         Total Cost: $<span id="totalCost">0.00</span>
+      </h3>
+
+      <!-- Selling Price and Profit (outside dynamic content) -->
+      <div class="mt-4 text-right">
+        <label for="sellingPrice" class="font-semibold">Selling Price: $</label>
+        <input id="sellingPrice" type="number" step="0.01" class="border rounded-lg p-1 w-24 ml-2" placeholder="0.00" oninput="updateProfit()" />
+      </div>
+      <h3 class="text-right text-lg font-semibold mt-2">
+        Profit: $<span id="profit">0.00</span>
       </h3>
     </div>
 
@@ -57,7 +71,7 @@
     Version: <span id="version-number">Loading...</span>
   </footer>
 
-  <!-- ✏️ Edit Ingredient Modal -->
+  <!-- Edit Ingredient Modal -->
   <div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-lg p-6 w-80">
       <h2 class="text-lg font-semibold mb-4 text-orange-600">Edit Ingredient</h2>
@@ -72,16 +86,14 @@
   </div>
 
   <script>
-    // Version fetcher
     fetch('version.txt')
-      .then(response => response.text())
-      .then(data => { document.getElementById('version-number').textContent = data.trim(); })
-      .catch(() => { document.getElementById('version-number').textContent = 'unknown'; });
+      .then(res => res.text())
+      .then(data => document.getElementById('version-number').textContent = data.trim())
+      .catch(() => document.getElementById('version-number').textContent = 'unknown');
 
     let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
     const params = new URLSearchParams(window.location.search);
     const cakeIndex = parseInt(params.get('cake'), 10);
-
     if (isNaN(cakeIndex) || !cakes[cakeIndex]) {
       alert('Cake not found!');
       window.location.href = 'index.html';
@@ -90,38 +102,31 @@
     let currentCake = cakes[cakeIndex];
     if (!currentCake.ingredients) currentCake.ingredients = [];
     if (!currentCake.recipe) currentCake.recipe = [];
-
     document.getElementById('cakeTitle').textContent = currentCake.name;
 
     function goBack() { window.location.href = 'index.html'; }
     function saveCake() { cakes[cakeIndex] = currentCake; localStorage.setItem('cakes', JSON.stringify(cakes)); }
 
-    // 🔹 Calculate cost safely
     function calculateCost(ingredient, qty) {
       let unitValue = parseFloat(ingredient.unit.replace(/[^\d.]/g, ''));
-      if (!isNaN(unitValue) && unitValue > 0) {
-        return (qty / unitValue) * ingredient.cost;
-      } else {
-        return ingredient.cost * qty;
-      }
+      return (!isNaN(unitValue) && unitValue > 0) ? (qty / unitValue) * ingredient.cost : ingredient.cost * qty;
     }
 
-    // 🧁 Ingredient Functions
+    function updateProfit() {
+      const sellingPrice = parseFloat(document.getElementById('sellingPrice').value);
+      const totalCost = parseFloat(document.getElementById('totalCost').textContent);
+      document.getElementById('profit').textContent = (!isNaN(sellingPrice) ? (sellingPrice - totalCost) : 0).toFixed(2);
+    }
+
+    // Ingredient functions
     function addIngredient() {
       const name = document.getElementById('ingredientName').value.trim();
       const cost = parseFloat(document.getElementById('ingredientCost').value);
       const unit = document.getElementById('ingredientUnit').value.trim();
       if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
-
-      if (currentCake.ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) {
-        return alert('Ingredient already exists.');
-      }
-
+      if (currentCake.ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) return alert('Ingredient already exists.');
       currentCake.ingredients.push({ name, cost, unit });
-      saveCake();
-      updateIngredientDropdown();
-      renderIngredientTable();
-
+      saveCake(); updateIngredientDropdown(); renderIngredientTable();
       document.getElementById('ingredientName').value = '';
       document.getElementById('ingredientCost').value = '';
       document.getElementById('ingredientUnit').value = '';
@@ -129,18 +134,15 @@
 
     function removeIngredient(index) {
       const ingredient = currentCake.ingredients[index];
-      if (!confirm(`Delete ingredient "${ingredient.name}"? This will also remove it from the recipe.`)) return;
-      currentCake.ingredients.splice(index, 1);
-      currentCake.recipe = currentCake.recipe.filter(r => r.name !== ingredient.name);
-      saveCake();
-      updateIngredientDropdown();
-      renderIngredientTable();
-      renderRecipeTable();
+      if (!confirm(`Delete "${ingredient.name}"? This will also remove it from the recipe.`)) return;
+      currentCake.ingredients.splice(index,1);
+      currentCake.recipe = currentCake.recipe.filter(r=>r.name!==ingredient.name);
+      saveCake(); updateIngredientDropdown(); renderIngredientTable(); renderRecipeTable();
     }
 
-    // Edit ingredient modal
+    // Edit modal
     let editIndex = null;
-    function openEditModal(index) {
+    function openEditModal(index){
       editIndex = index;
       const ing = currentCake.ingredients[index];
       document.getElementById('editName').value = ing.name;
@@ -148,62 +150,33 @@
       document.getElementById('editUnit').value = ing.unit;
       document.getElementById('editModal').classList.remove('hidden');
     }
-    function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
-
-    function saveEdit() {
+    function closeModal(){ document.getElementById('editModal').classList.add('hidden'); }
+    function saveEdit(){
       const name = document.getElementById('editName').value.trim();
       const cost = parseFloat(document.getElementById('editCost').value);
       const unit = document.getElementById('editUnit').value.trim();
-      if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
-
-      currentCake.ingredients[editIndex] = { name, cost, unit };
-
-      // Update recipe costs
-      currentCake.recipe = currentCake.recipe.map(r => {
-        if (r.name === name) {
-          const ingredient = currentCake.ingredients.find(i => i.name === r.name);
-          return { ...r, cost: calculateCost(ingredient, r.qty) };
-        }
+      if(!name || isNaN(cost) || !unit) return alert('Fill in all fields');
+      currentCake.ingredients[editIndex] = {name,cost,unit};
+      currentCake.recipe = currentCake.recipe.map(r=>{
+        if(r.name===name){ const ingredient = currentCake.ingredients.find(i=>i.name===r.name); return {...r, cost: calculateCost(ingredient,r.qty)} }
         return r;
       });
-
-      saveCake();
-      renderIngredientTable();
-      updateIngredientDropdown();
-      renderRecipeTable();
-      closeModal();
+      saveCake(); renderIngredientTable(); updateIngredientDropdown(); renderRecipeTable(); updateProfit(); closeModal();
     }
 
-    function updateIngredientDropdown() {
-      const dropdown = document.getElementById('recipeIngredient');
-      dropdown.innerHTML = currentCake.ingredients.map(i => `<option>${i.name}</option>`).join('');
-    }
+    function updateIngredientDropdown(){ document.getElementById('recipeIngredient').innerHTML = currentCake.ingredients.map(i=>`<option>${i.name}</option>`).join(''); }
 
-    function renderIngredientTable() {
-      let existing = document.getElementById('ingredientTableContainer');
-      if (!existing) {
-        const container = document.createElement('div');
-        container.id = 'ingredientTableContainer';
-        container.className = 'mt-6';
-        container.innerHTML = `
-          <h3 class="text-lg font-semibold mb-2">Ingredients List</h3>
-          <table class="w-full border-collapse text-sm">
-            <thead class="bg-gray-100">
-              <tr>
-                <th class="border p-2 text-left">Name</th>
-                <th class="border p-2 text-left">Cost per Unit</th>
-                <th class="border p-2 text-left">Unit</th>
-                <th class="border p-2 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="ingredientTableBody"></tbody>
-          </table>
-        `;
-        document.querySelector('.mb-8').appendChild(container);
-      }
-
-      const tbody = document.getElementById('ingredientTableBody');
-      tbody.innerHTML = currentCake.ingredients.map((i, index) => `
+    function renderIngredientTable(){
+      const container = document.getElementById('ingredientTableContainer');
+      container.innerHTML=`
+        <h3 class="text-lg font-semibold mb-2">Ingredients List</h3>
+        <table class="w-full border-collapse text-sm">
+          <thead class="bg-gray-100">
+            <tr><th class="border p-2 text-left">Name</th><th class="border p-2 text-left">Cost/unit</th><th class="border p-2 text-left">Unit</th><th class="border p-2 text-center">Actions</th></tr>
+          </thead>
+          <tbody id="ingredientTableBody"></tbody>
+        </table>`;
+      document.getElementById('ingredientTableBody').innerHTML = currentCake.ingredients.map((i,index)=>`
         <tr>
           <td class="border p-2">${i.name}</td>
           <td class="border p-2">$${i.cost.toFixed(2)}</td>
@@ -212,68 +185,53 @@
             <button onclick="openEditModal(${index})" class="text-blue-500 hover:text-blue-700 mr-2">✏️</button>
             <button onclick="removeIngredient(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
           </td>
-        </tr>
-      `).join('');
+        </tr>`).join('');
     }
 
-    // Recipe functions
-    function addToRecipe() {
+    function addToRecipe(){
       const name = document.getElementById('recipeIngredient').value;
       const qty = parseFloat(document.getElementById('recipeQuantity').value);
-      if (!name || isNaN(qty) || qty <= 0) return alert('Enter valid quantity');
-
-      const ingredient = currentCake.ingredients.find(i => i.name === name);
-      if (!ingredient) return;
-
+      if(!name||isNaN(qty)||qty<=0) return alert('Enter valid quantity');
+      const ingredient = currentCake.ingredients.find(i=>i.name===name);
+      if(!ingredient) return;
       const cost = calculateCost(ingredient, qty);
-
-      currentCake.recipe.push({ name, qty, cost });
-      saveCake();
-      renderRecipeTable();
-      document.getElementById('recipeQuantity').value = '';
+      currentCake.recipe.push({name, qty, cost});
+      saveCake(); renderRecipeTable(); document.getElementById('recipeQuantity').value='';
     }
 
-    function renderRecipeTable() {
+    function renderRecipeTable(){
       const tbody = document.getElementById('recipeTableBody');
-      tbody.innerHTML = currentCake.recipe.map((r, index) => {
-        const ingredient = currentCake.ingredients.find(i => i.name === r.name);
+      tbody.innerHTML=currentCake.recipe.map((r,index)=>{
+        const ingredient = currentCake.ingredients.find(i=>i.name===r.name);
         const unit = ingredient ? ingredient.unit : '';
-        return `
-          <tr>
-            <td class="border p-2">${r.name}</td>
-            <td class="border p-2">${r.qty} × ${unit}</td>
-            <td class="border p-2 text-right">$${r.cost.toFixed(2)}</td>
-            <td class="border p-2 text-center">
-              <button onclick="removeRecipeItem(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
-            </td>
-          </tr>
-        `;
+        return `<tr>
+          <td class="border p-2">${r.name}</td>
+          <td class="border p-2">${r.qty} × ${unit}</td>
+          <td class="border p-2 text-right">$${r.cost.toFixed(2)}</td>
+          <td class="border p-2 text-center">
+            <button onclick="removeRecipeItem(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
+          </td>
+        </tr>`;
       }).join('');
       updateTotalCost();
     }
 
-    function removeRecipeItem(index) {
-      if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
-        currentCake.recipe.splice(index, 1);
-        saveCake();
-        renderRecipeTable();
+    function removeRecipeItem(index){
+      if(confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)){
+        currentCake.recipe.splice(index,1); saveCake(); renderRecipeTable();
       }
     }
 
-    function updateTotalCost() {
-      const total = currentCake.recipe.reduce((sum, i) => sum + i.cost, 0);
-      document.getElementById('totalCost').textContent = total.toFixed(2);
+    function updateTotalCost(){
+      const total=currentCake.recipe.reduce((sum,i)=>sum+i.cost,0);
+      document.getElementById('totalCost').textContent=total.toFixed(2);
+      updateProfit();
     }
 
-    function saveAndReturn() {
-      saveCake();
-      window.location.href = 'index.html';
-    }
+    function saveAndReturn(){ saveCake(); window.location.href='index.html'; }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      updateIngredientDropdown();
-      renderIngredientTable();
-      renderRecipeTable();
+    window.addEventListener('DOMContentLoaded',()=>{
+      updateIngredientDropdown(); renderIngredientTable(); renderRecipeTable();
     });
   </script>
 </body>
