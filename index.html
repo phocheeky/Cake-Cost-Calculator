@@ -10,6 +10,9 @@
       background: #fff8f3;
       color: #333;
       margin: 2rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
     }
     h1 {
       text-align: center;
@@ -19,14 +22,26 @@
       background: white;
       border-radius: 10px;
       padding: 1rem;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     label { display: block; margin-top: 0.5rem; }
     input, select, button {
-      margin-top: 0.2rem;
+      margin-top: 0.3rem;
       padding: 0.5rem;
       width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background: #d2691e;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 0.8rem;
+    }
+    button:hover {
+      background: #b85e1a;
     }
     table {
       width: 100%;
@@ -37,6 +52,12 @@
       border: 1px solid #ccc;
       padding: 0.5rem;
       text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    h3 {
+      text-align: right;
     }
   </style>
 </head>
@@ -73,68 +94,91 @@
   </div>
 
   <script>
-  let ingredients = JSON.parse(localStorage.getItem('ingredients')) || [];
-  let recipe = JSON.parse(localStorage.getItem('recipe')) || [];
+    // --- LocalStorage Data Handling ---
+    let ingredients = JSON.parse(localStorage.getItem('ingredients')) || [];
+    let recipe = JSON.parse(localStorage.getItem('recipe')) || [];
 
-  function saveData() {
-    localStorage.setItem('ingredients', JSON.stringify(ingredients));
-    localStorage.setItem('recipe', JSON.stringify(recipe));
-  }
+    function saveData() {
+      localStorage.setItem('ingredients', JSON.stringify(ingredients));
+      localStorage.setItem('recipe', JSON.stringify(recipe));
+    }
 
-  function addIngredient() {
-    const name = document.getElementById('ingredientName').value;
-    const cost = parseFloat(document.getElementById('ingredientCost').value);
-    const unit = document.getElementById('ingredientUnit').value;
+    // --- Ingredient Management ---
+    function addIngredient() {
+      const name = document.getElementById('ingredientName').value.trim();
+      const cost = parseFloat(document.getElementById('ingredientCost').value);
+      const unit = document.getElementById('ingredientUnit').value.trim();
 
-    if (!name || !cost || !unit) return alert('Please fill all fields.');
+      if (!name || !cost || !unit) {
+        alert('Please fill in all ingredient fields.');
+        return;
+      }
 
-    ingredients.push({ name, cost, unit });
-    updateIngredientDropdown();
-    saveData();
+      // Prevent duplicate names
+      if (ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) {
+        alert('Ingredient already exists.');
+        return;
+      }
 
-    document.getElementById('ingredientName').value = '';
-    document.getElementById('ingredientCost').value = '';
-    document.getElementById('ingredientUnit').value = '';
-  }
+      ingredients.push({ name, cost, unit });
+      saveData();
+      updateIngredientDropdown();
 
-  function updateIngredientDropdown() {
-    const dropdown = document.getElementById('recipeIngredient');
-    dropdown.innerHTML = ingredients.map(i => `<option>${i.name}</option>`).join('');
-  }
+      document.getElementById('ingredientName').value = '';
+      document.getElementById('ingredientCost').value = '';
+      document.getElementById('ingredientUnit').value = '';
+    }
 
-  function addToRecipe() {
-    const name = document.getElementById('recipeIngredient').value;
-    const qty = parseFloat(document.getElementById('recipeQuantity').value);
-    if (!name || !qty) return alert('Select ingredient and quantity.');
+    function updateIngredientDropdown() {
+      const dropdown = document.getElementById('recipeIngredient');
+      dropdown.innerHTML = ingredients.map(i => `<option>${i.name}</option>`).join('');
+    }
 
-    const ingredient = ingredients.find(i => i.name === name);
-    const cost = ingredient.cost * qty;
-    recipe.push({ name, qty, cost });
-    saveData();
+    // --- Recipe Management ---
+    function addToRecipe() {
+      const name = document.getElementById('recipeIngredient').value;
+      const qty = parseFloat(document.getElementById('recipeQuantity').value);
 
-    renderRecipeTable();
-  }
+      if (!name || isNaN(qty) || qty <= 0) {
+        alert('Please select an ingredient and enter a valid quantity.');
+        return;
+      }
 
-  function renderRecipeTable() {
-    const table = document.querySelector('#recipeTable tbody');
-    table.innerHTML = recipe
-      .map(r => `<tr><td>${r.name}</td><td>${r.qty} × ${ingredients.find(i => i.name === r.name).unit}</td><td>$${r.cost.toFixed(2)}</td></tr>`)
-      .join('');
-    updateTotalCost();
-  }
+      const ingredient = ingredients.find(i => i.name === name);
+      if (!ingredient) return;
 
-  function updateTotalCost() {
-    const total = recipe.reduce((sum, i) => sum + i.cost, 0);
-    document.getElementById('totalCost').innerText = total.toFixed(2);
-  }
+      const cost = ingredient.cost * qty;
+      recipe.push({ name, qty, cost });
+      saveData();
+      renderRecipeTable();
+      document.getElementById('recipeQuantity').value = '';
+    }
 
-  // Load saved data on page load
-  window.addEventListener('DOMContentLoaded', () => {
-    updateIngredientDropdown();
-    renderRecipeTable();
-  });
-</script>
+    function renderRecipeTable() {
+      const tableBody = document.querySelector('#recipeTable tbody');
+      tableBody.innerHTML = recipe.map(r => {
+        const ingredient = ingredients.find(i => i.name === r.name);
+        const unitText = ingredient ? ingredient.unit : '';
+        return `<tr>
+                  <td>${r.name}</td>
+                  <td>${r.qty} × ${unitText}</td>
+                  <td>$${r.cost.toFixed(2)}</td>
+                </tr>`;
+      }).join('');
+      updateTotalCost();
+    }
+
+    function updateTotalCost() {
+      const total = recipe.reduce((sum, i) => sum + i.cost, 0);
+      document.getElementById('totalCost').innerText = total.toFixed(2);
+    }
+
+    // --- Load saved data on page load ---
+    window.addEventListener('DOMContentLoaded', () => {
+      updateIngredientDropdown();
+      renderRecipeTable();
+    });
+  </script>
 
 </body>
 </html>
-
