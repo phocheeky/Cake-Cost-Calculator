@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cake Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-orange-50 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
+
+  <div class="w-full max-w-xl bg-white shadow-md rounded-2xl p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h1 id="cakeTitle" class="text-2xl font-bold text-orange-600">Cake Editor</h1>
+      <button onclick="goBack()" class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300">⬅ Back</button>
+    </div>
+
+    <!-- Ingredient Section -->
+    <div class="mb-8">
+      <h2 class="text-lg font-semibold mb-3">Add Ingredient</h2>
+      <input id="ingredientName" placeholder="Ingredient name" class="border rounded-lg w-full p-2 mb-2" />
+      <input id="ingredientCost" type="number" step="0.01" placeholder="Cost per unit ($)" class="border rounded-lg w-full p-2 mb-2" />
+      <input id="ingredientUnit" placeholder="Unit (e.g. 100g, egg)" class="border rounded-lg w-full p-2 mb-2" />
+      <button onclick="addIngredient()" class="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition">Add Ingredient</button>
+    </div>
+
+    <!-- Recipe Section -->
+    <div>
+      <h2 class="text-lg font-semibold mb-3">Recipe</h2>
+      <select id="recipeIngredient" class="border rounded-lg w-full p-2 mb-2"></select>
+      <input id="recipeQuantity" type="number" step="0.01" placeholder="Quantity used" class="border rounded-lg w-full p-2 mb-2" />
+      <button onclick="addToRecipe()" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">Add to Recipe</button>
+
+      <table class="w-full mt-6 border-collapse text-sm">
+        <thead class="bg-gray-100">
+          <tr><th class="border p-2 text-left">Ingredient</th><th class="border p-2 text-left">Quantity</th><th class="border p-2 text-right">Cost</th></tr>
+        </thead>
+        <tbody id="recipeTableBody"></tbody>
+      </table>
+
+      <h3 class="text-right text-lg font-semibold mt-4">
+        Total Cost: $<span id="totalCost">0.00</span>
+      </h3>
+    </div>
+
+    <button onclick="saveAndReturn()" class="mt-8 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">💾 Save & Return</button>
+  </div>
+
+  <script>
+    let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
+    const params = new URLSearchParams(window.location.search);
+    const cakeIndex = parseInt(params.get('cake'), 10);
+
+    if (isNaN(cakeIndex) || !cakes[cakeIndex]) {
+      alert('Cake not found!');
+      window.location.href = 'index.html';
+    }
+
+    let currentCake = cakes[cakeIndex];
+    document.getElementById('cakeTitle').textContent = currentCake.name;
+
+    function goBack() {
+      window.location.href = 'index.html';
+    }
+
+    function saveCake() {
+      cakes[cakeIndex] = currentCake;
+      localStorage.setItem('cakes', JSON.stringify(cakes));
+    }
+
+    function addIngredient() {
+      const name = document.getElementById('ingredientName').value.trim();
+      const cost = parseFloat(document.getElementById('ingredientCost').value);
+      const unit = document.getElementById('ingredientUnit').value.trim();
+      if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
+
+      currentCake.ingredients.push({ name, cost, unit });
+      saveCake();
+      updateIngredientDropdown();
+      document.getElementById('ingredientName').value = '';
+      document.getElementById('ingredientCost').value = '';
+      document.getElementById('ingredientUnit').value = '';
+    }
+
+    function updateIngredientDropdown() {
+      const dropdown = document.getElementById('recipeIngredient');
+      dropdown.innerHTML = currentCake.ingredients.map(i => `<option>${i.name}</option>`).join('');
+    }
+
+    function addToRecipe() {
+      const name = document.getElementById('recipeIngredient').value;
+      const qty = parseFloat(document.getElementById('recipeQuantity').value);
+      if (!name || isNaN(qty) || qty <= 0) return alert('Enter valid quantity');
+
+      const ingredient = currentCake.ingredients.find(i => i.name === name);
+      if (!ingredient) return;
+      const cost = ingredient.cost * qty;
+      currentCake.recipe.push({ name, qty, cost });
+      saveCake();
+      renderRecipeTable();
+      document.getElementById('recipeQuantity').value = '';
+    }
+
+    function renderRecipeTable() {
+      const tbody = document.getElementById('recipeTableBody');
+      tbody.innerHTML = currentCake.recipe.map(r => {
+        const ingredient = currentCake.ingredients.find(i => i.name === r.name);
+        const unit = ingredient ? ingredient.unit : '';
+        return `<tr><td class="border p-2">${r.name}</td><td class="border p-2">${r.qty} × ${unit}</td><td class="border p-2 text-right">$${r.cost.toFixed(2)}</td></tr>`;
+      }).join('');
+      updateTotalCost();
+    }
+
+    function updateTotalCost() {
+      const total = currentCake.recipe.reduce((sum, i) => sum + i.cost, 0);
+      document.getElementById('totalCost').textContent = total.toFixed(2);
+    }
+
+    function saveAndReturn() {
+      saveCake();
+      window.location.href = 'index.html';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateIngredientDropdown();
+      renderRecipeTable();
+    });
+  </script>
+
+</body>
+</html>
