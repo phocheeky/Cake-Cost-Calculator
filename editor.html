@@ -32,7 +32,12 @@
 
       <table class="w-full mt-6 border-collapse text-sm">
         <thead class="bg-gray-100">
-          <tr><th class="border p-2 text-left">Ingredient</th><th class="border p-2 text-left">Quantity</th><th class="border p-2 text-right">Cost</th></tr>
+          <tr>
+            <th class="border p-2 text-left">Ingredient</th>
+            <th class="border p-2 text-left">Quantity</th>
+            <th class="border p-2 text-right">Cost</th>
+            <th class="border p-2 text-center">Actions</th>
+          </tr>
         </thead>
         <tbody id="recipeTableBody"></tbody>
       </table>
@@ -42,76 +47,90 @@
       </h3>
     </div>
 
-    <button onclick="saveAndReturn()" class="mt-8 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">💾 Save & Return</button>
+    <button onclick="saveAndReturn()" class="mt-8 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
+      💾 Save & Return
+    </button>
   </div>
-  
+
+  <!-- Footer for version info -->
+  <footer class="mt-6 text-center text-sm text-gray-500">
+    Version: <span id="version-number">Loading...</span>
+  </footer>
+
   <script>
+    // 🧾 Version fetcher
+    fetch('version.txt')
+      .then(response => response.text())
+      .then(data => {
+        document.getElementById('version-number').textContent = data.trim();
+      })
+      .catch(() => {
+        document.getElementById('version-number').textContent = 'unknown';
+      });
+
+    // 🍰 Data setup
     let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
     const params = new URLSearchParams(window.location.search);
     const cakeIndex = parseInt(params.get('cake'), 10);
-  
+
     if (isNaN(cakeIndex) || !cakes[cakeIndex]) {
       alert('Cake not found!');
       window.location.href = 'index.html';
     }
-  
+
     let currentCake = cakes[cakeIndex];
     document.getElementById('cakeTitle').textContent = currentCake.name;
-  
+
     function goBack() {
       window.location.href = 'index.html';
     }
-  
+
     function saveCake() {
       cakes[cakeIndex] = currentCake;
       localStorage.setItem('cakes', JSON.stringify(cakes));
     }
-  
+
     // 🧁 INGREDIENT FUNCTIONS
     function addIngredient() {
       const name = document.getElementById('ingredientName').value.trim();
       const cost = parseFloat(document.getElementById('ingredientCost').value);
       const unit = document.getElementById('ingredientUnit').value.trim();
       if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
-  
-      // prevent duplicates
+
       if (currentCake.ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) {
         alert('Ingredient already exists.');
         return;
       }
-  
+
       currentCake.ingredients.push({ name, cost, unit });
       saveCake();
       updateIngredientDropdown();
       renderIngredientTable();
-  
+
       document.getElementById('ingredientName').value = '';
       document.getElementById('ingredientCost').value = '';
       document.getElementById('ingredientUnit').value = '';
     }
-  
+
     function removeIngredient(index) {
       const ingredient = currentCake.ingredients[index];
       if (!confirm(`Delete ingredient "${ingredient.name}"? This will also remove it from the recipe.`)) return;
-  
-      // Remove from ingredients
+
       currentCake.ingredients.splice(index, 1);
-      // Remove from recipe if used
       currentCake.recipe = currentCake.recipe.filter(r => r.name !== ingredient.name);
       saveCake();
-  
+
       updateIngredientDropdown();
       renderIngredientTable();
       renderRecipeTable();
     }
-  
+
     function updateIngredientDropdown() {
       const dropdown = document.getElementById('recipeIngredient');
       dropdown.innerHTML = currentCake.ingredients.map(i => `<option>${i.name}</option>`).join('');
     }
-  
+
     function renderIngredientTable() {
-      // Create or update the ingredient table under the input fields
       let existing = document.getElementById('ingredientTableContainer');
       if (!existing) {
         const container = document.createElement('div');
@@ -133,7 +152,7 @@
         `;
         document.querySelector('.mb-8').appendChild(container);
       }
-  
+
       const tbody = document.getElementById('ingredientTableBody');
       tbody.innerHTML = currentCake.ingredients.map((i, index) => `
         <tr>
@@ -146,24 +165,24 @@
         </tr>
       `).join('');
     }
-  
+
     // 🍰 RECIPE FUNCTIONS
     function addToRecipe() {
       const name = document.getElementById('recipeIngredient').value;
       const qty = parseFloat(document.getElementById('recipeQuantity').value);
       if (!name || isNaN(qty) || qty <= 0) return alert('Enter valid quantity');
-  
+
       const ingredient = currentCake.ingredients.find(i => i.name === name);
       if (!ingredient) return;
-  
+
       const cost = ingredient.cost * qty;
       currentCake.recipe.push({ name, qty, cost });
       saveCake();
       renderRecipeTable();
-  
+
       document.getElementById('recipeQuantity').value = '';
     }
-  
+
     function renderRecipeTable() {
       const tbody = document.getElementById('recipeTableBody');
       tbody.innerHTML = currentCake.recipe.map((r, index) => {
@@ -174,7 +193,7 @@
             <td class="border p-2">${r.name}</td>
             <td class="border p-2">${r.qty} × ${unit}</td>
             <td class="border p-2 text-right">$${r.cost.toFixed(2)}</td>
-            <td class="border p-2 text-right">
+            <td class="border p-2 text-center">
               <button onclick="removeRecipeItem(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
             </td>
           </tr>
@@ -182,7 +201,7 @@
       }).join('');
       updateTotalCost();
     }
-  
+
     function removeRecipeItem(index) {
       if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
         currentCake.recipe.splice(index, 1);
@@ -190,26 +209,22 @@
         renderRecipeTable();
       }
     }
-  
+
     function updateTotalCost() {
       const total = currentCake.recipe.reduce((sum, i) => sum + i.cost, 0);
       document.getElementById('totalCost').textContent = total.toFixed(2);
     }
-  
+
     function saveAndReturn() {
       saveCake();
       window.location.href = 'index.html';
     }
-  
+
     window.addEventListener('DOMContentLoaded', () => {
       updateIngredientDropdown();
       renderIngredientTable();
       renderRecipeTable();
     });
-</script>
-
-
-  
-
+  </script>
 </body>
 </html>
