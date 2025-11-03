@@ -22,7 +22,22 @@
 
     <p id="emptyMessage" class="text-gray-500 text-center mt-6">No cakes saved yet. Click “New Cake” to start!</p>
   </div>
+  
+  <footer style="text-align:center; margin-top: 20px; font-size: 0.9em; color: #777;">
+  Version: <span id="version-number">Loading...</span>
+  </footer>
 
+  <script>
+  fetch('version.txt')
+    .then(response => response.text())
+    .then(data => {
+      document.getElementById('version-number').textContent = data.trim();
+    })
+    .catch(() => {
+      document.getElementById('version-number').textContent = 'unknown';
+    });
+  </script>
+  
   <script>
     let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
 
@@ -81,3 +96,4 @@
 
 </body>
 </html>
+
