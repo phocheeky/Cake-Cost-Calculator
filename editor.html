@@ -44,87 +44,109 @@
 
     <button onclick="saveAndReturn()" class="mt-8 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">💾 Save & Return</button>
   </div>
-
+  
   <script>
     let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
     const params = new URLSearchParams(window.location.search);
     const cakeIndex = parseInt(params.get('cake'), 10);
-
+  
     if (isNaN(cakeIndex) || !cakes[cakeIndex]) {
       alert('Cake not found!');
       window.location.href = 'index.html';
     }
-
+  
     let currentCake = cakes[cakeIndex];
     document.getElementById('cakeTitle').textContent = currentCake.name;
-
+  
     function goBack() {
       window.location.href = 'index.html';
     }
-
+  
     function saveCake() {
       cakes[cakeIndex] = currentCake;
       localStorage.setItem('cakes', JSON.stringify(cakes));
     }
-
+  
     function addIngredient() {
       const name = document.getElementById('ingredientName').value.trim();
       const cost = parseFloat(document.getElementById('ingredientCost').value);
       const unit = document.getElementById('ingredientUnit').value.trim();
       if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
-
+  
       currentCake.ingredients.push({ name, cost, unit });
       saveCake();
       updateIngredientDropdown();
+  
       document.getElementById('ingredientName').value = '';
       document.getElementById('ingredientCost').value = '';
       document.getElementById('ingredientUnit').value = '';
     }
-
+  
     function updateIngredientDropdown() {
       const dropdown = document.getElementById('recipeIngredient');
       dropdown.innerHTML = currentCake.ingredients.map(i => `<option>${i.name}</option>`).join('');
     }
-
+  
     function addToRecipe() {
       const name = document.getElementById('recipeIngredient').value;
       const qty = parseFloat(document.getElementById('recipeQuantity').value);
       if (!name || isNaN(qty) || qty <= 0) return alert('Enter valid quantity');
-
+  
       const ingredient = currentCake.ingredients.find(i => i.name === name);
       if (!ingredient) return;
+  
       const cost = ingredient.cost * qty;
       currentCake.recipe.push({ name, qty, cost });
       saveCake();
       renderRecipeTable();
+  
       document.getElementById('recipeQuantity').value = '';
     }
-
+  
     function renderRecipeTable() {
       const tbody = document.getElementById('recipeTableBody');
-      tbody.innerHTML = currentCake.recipe.map(r => {
+      tbody.innerHTML = currentCake.recipe.map((r, index) => {
         const ingredient = currentCake.ingredients.find(i => i.name === r.name);
         const unit = ingredient ? ingredient.unit : '';
-        return `<tr><td class="border p-2">${r.name}</td><td class="border p-2">${r.qty} × ${unit}</td><td class="border p-2 text-right">$${r.cost.toFixed(2)}</td></tr>`;
+        return `
+          <tr>
+            <td class="border p-2">${r.name}</td>
+            <td class="border p-2">${r.qty} × ${unit}</td>
+            <td class="border p-2 text-right">$${r.cost.toFixed(2)}</td>
+            <td class="border p-2 text-right">
+              <button onclick="removeRecipeItem(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
+            </td>
+          </tr>
+        `;
       }).join('');
       updateTotalCost();
     }
-
+  
+    function removeRecipeItem(index) {
+      if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
+        currentCake.recipe.splice(index, 1);
+        saveCake();
+        renderRecipeTable();
+      }
+    }
+  
     function updateTotalCost() {
       const total = currentCake.recipe.reduce((sum, i) => sum + i.cost, 0);
       document.getElementById('totalCost').textContent = total.toFixed(2);
     }
-
+  
     function saveAndReturn() {
       saveCake();
       window.location.href = 'index.html';
     }
-
+  
     window.addEventListener('DOMContentLoaded', () => {
       updateIngredientDropdown();
       renderRecipeTable();
     });
-  </script>
+</script>
+
+  
 
 </body>
 </html>
