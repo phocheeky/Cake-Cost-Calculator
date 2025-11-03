@@ -72,13 +72,12 @@
   </div>
 
   <script>
-    // 🧾 Version fetcher
+    // Version fetcher
     fetch('version.txt')
       .then(response => response.text())
       .then(data => { document.getElementById('version-number').textContent = data.trim(); })
       .catch(() => { document.getElementById('version-number').textContent = 'unknown'; });
 
-    // 🍰 Data setup
     let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
     const params = new URLSearchParams(window.location.search);
     const cakeIndex = parseInt(params.get('cake'), 10);
@@ -94,16 +93,10 @@
 
     document.getElementById('cakeTitle').textContent = currentCake.name;
 
-    function goBack() {
-      window.location.href = 'index.html';
-    }
+    function goBack() { window.location.href = 'index.html'; }
+    function saveCake() { cakes[cakeIndex] = currentCake; localStorage.setItem('cakes', JSON.stringify(cakes)); }
 
-    function saveCake() {
-      cakes[cakeIndex] = currentCake;
-      localStorage.setItem('cakes', JSON.stringify(cakes));
-    }
-
-    // 🧁 INGREDIENT FUNCTIONS
+    // 🧁 Ingredient Functions
     function addIngredient() {
       const name = document.getElementById('ingredientName').value.trim();
       const cost = parseFloat(document.getElementById('ingredientCost').value);
@@ -111,8 +104,7 @@
       if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
 
       if (currentCake.ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) {
-        alert('Ingredient already exists.');
-        return;
+        return alert('Ingredient already exists.');
       }
 
       currentCake.ingredients.push({ name, cost, unit });
@@ -128,17 +120,15 @@
     function removeIngredient(index) {
       const ingredient = currentCake.ingredients[index];
       if (!confirm(`Delete ingredient "${ingredient.name}"? This will also remove it from the recipe.`)) return;
-
       currentCake.ingredients.splice(index, 1);
       currentCake.recipe = currentCake.recipe.filter(r => r.name !== ingredient.name);
       saveCake();
-
       updateIngredientDropdown();
       renderIngredientTable();
       renderRecipeTable();
     }
 
-    // ✏️ Edit Ingredient
+    // Edit ingredient modal
     let editIndex = null;
     function openEditModal(index) {
       editIndex = index;
@@ -148,10 +138,7 @@
       document.getElementById('editUnit').value = ing.unit;
       document.getElementById('editModal').classList.remove('hidden');
     }
-
-    function closeModal() {
-      document.getElementById('editModal').classList.add('hidden');
-    }
+    function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
 
     function saveEdit() {
       const name = document.getElementById('editName').value.trim();
@@ -162,17 +149,14 @@
       // Update ingredient
       currentCake.ingredients[editIndex] = { name, cost, unit };
 
-      // Recalculate recipe costs that use this ingredient
+      // Recalculate recipe costs safely
       currentCake.recipe = currentCake.recipe.map(r => {
         if (r.name === name) {
           const ingredient = currentCake.ingredients.find(i => i.name === r.name);
-          const unitValue = parseFloat(ingredient.unit);
-          let newCost;
-          if (!isNaN(unitValue) && unitValue > 0 && r.qty < unitValue) {
-            newCost = (r.qty / unitValue) * ingredient.cost;
-          } else {
-            newCost = ingredient.cost * r.qty;
-          }
+          let unitValue = parseFloat(ingredient.unit.replace(/[^\d.]/g, ''));
+          if (isNaN(unitValue) || unitValue <= 0) unitValue = null;
+
+          let newCost = unitValue && r.qty < unitValue ? (r.qty / unitValue) * ingredient.cost : ingredient.cost * r.qty;
           return { ...r, cost: newCost };
         }
         return r;
@@ -181,7 +165,7 @@
       saveCake();
       renderIngredientTable();
       updateIngredientDropdown();
-      renderRecipeTable();  // recalc recipe table & total cost
+      renderRecipeTable();
       closeModal();
     }
 
@@ -227,7 +211,7 @@
       `).join('');
     }
 
-    // 🍰 RECIPE FUNCTIONS
+    // Recipe functions
     function addToRecipe() {
       const name = document.getElementById('recipeIngredient').value;
       const qty = parseFloat(document.getElementById('recipeQuantity').value);
@@ -236,13 +220,9 @@
       const ingredient = currentCake.ingredients.find(i => i.name === name);
       if (!ingredient) return;
 
-      const unitValue = parseFloat(ingredient.unit);
-      let cost;
-      if (!isNaN(unitValue) && unitValue > 0 && qty < unitValue) {
-        cost = (qty / unitValue) * ingredient.cost;
-      } else {
-        cost = ingredient.cost * qty;
-      }
+      let unitValue = parseFloat(ingredient.unit.replace(/[^\d.]/g, ''));
+      if (isNaN(unitValue) || unitValue <= 0) unitValue = null;
+      const cost = unitValue && qty < unitValue ? (qty / unitValue) * ingredient.cost : ingredient.cost * qty;
 
       currentCake.recipe.push({ name, qty, cost });
       saveCake();
@@ -294,4 +274,4 @@
     });
   </script>
 </body>
-</html
+</html>
