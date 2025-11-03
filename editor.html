@@ -159,10 +159,29 @@
       const unit = document.getElementById('editUnit').value.trim();
       if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
 
+      // Update ingredient
       currentCake.ingredients[editIndex] = { name, cost, unit };
+
+      // Recalculate recipe costs that use this ingredient
+      currentCake.recipe = currentCake.recipe.map(r => {
+        if (r.name === name) {
+          const ingredient = currentCake.ingredients.find(i => i.name === r.name);
+          const unitValue = parseFloat(ingredient.unit);
+          let newCost;
+          if (!isNaN(unitValue) && unitValue > 0 && r.qty < unitValue) {
+            newCost = (r.qty / unitValue) * ingredient.cost;
+          } else {
+            newCost = ingredient.cost * r.qty;
+          }
+          return { ...r, cost: newCost };
+        }
+        return r;
+      });
+
       saveCake();
       renderIngredientTable();
       updateIngredientDropdown();
+      renderRecipeTable();  // recalc recipe table & total cost
       closeModal();
     }
 
@@ -275,4 +294,4 @@
     });
   </script>
 </body>
-</html>
+</html
