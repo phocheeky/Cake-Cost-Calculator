@@ -1,1 +1,1 @@
-A caske costing calculator
+A cake costing calculator
