@@ -23,6 +23,18 @@
       <button onclick="addIngredient()" class="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition">Add Ingredient</button>
     </div>
 
+    <table class="w-full border-collapse text-sm mb-8">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="border p-2 text-left">Ingredient</th>
+          <th class="border p-2 text-left">Cost / Unit</th>
+          <th class="border p-2 text-left">Unit</th>
+          <th class="border p-2 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="ingredientTableBody"></tbody>
+    </table>
+
     <!-- Recipe Section -->
     <div>
       <h2 class="text-lg font-semibold mb-3">Recipe</h2>
@@ -90,13 +102,43 @@
       localStorage.setItem('cakes', JSON.stringify(cakes));
     }
 
-    // 🧁 INGREDIENT FUNCTIONS
+    // ---------- Unit parsing helper ----------
+    // Returns { amount: Number, measure: string } if numeric unit found, else null
+    function parseUnitString(unitStr) {
+      if (!unitStr || typeof unitStr !== 'string') return null;
+      // Normalize common patterns: "per 100 g", "100g", "100 g", "1kg"
+      const s = unitStr.trim().toLowerCase();
+      // Look for a number and optional unit label
+      const m = s.match(/([0-9]*\.?[0-9]+)\s*(kg|g|l|ml)?/i);
+      if (!m) return null;
+      let num = parseFloat(m[1]);
+      let label = (m[2] || '').toLowerCase();
+
+      // Normalize to base amounts:
+      // if kg -> convert to grams (amount in grams)
+      // if l  -> convert to milliliters (amount in ml)
+      // We'll return amount in "base units" and include measure to help display, but calculation uses numeric ratio only.
+      if (label === 'kg') {
+        num = num * 1000; // treat as grams
+        label = 'g';
+      } else if (label === 'l') {
+        num = num * 1000; // treat as ml
+        label = 'ml';
+      } else if (label === '') {
+        // no suffix — treat as unit-count (e.g., "1" or "100")
+        label = null;
+      }
+      return { amount: num, measure: label };
+    }
+
+    // ---------- INGREDIENT MANAGEMENT ----------
     function addIngredient() {
       const name = document.getElementById('ingredientName').value.trim();
       const cost = parseFloat(document.getElementById('ingredientCost').value);
       const unit = document.getElementById('ingredientUnit').value.trim();
-      if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
+      if (!name || isNaN(cost) || !unit) return alert('Please fill all fields.');
 
+      // prevent duplicates
       if (currentCake.ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) {
         alert('Ingredient already exists.');
         return;
@@ -104,8 +146,8 @@
 
       currentCake.ingredients.push({ name, cost, unit });
       saveCake();
+      updateIngredientTable();
       updateIngredientDropdown();
-      renderIngredientTable();
 
       document.getElementById('ingredientName').value = '';
       document.getElementById('ingredientCost').value = '';
@@ -113,60 +155,41 @@
     }
 
     function removeIngredient(index) {
-      const ingredient = currentCake.ingredients[index];
-      if (!confirm(`Delete ingredient "${ingredient.name}"? This will also remove it from the recipe.`)) return;
+      if (!currentCake.ingredients[index]) return;
+      if (!confirm(`Delete ingredient "${currentCake.ingredients[index].name}"? This will also remove it from the recipe.`)) return;
 
+      const ingName = currentCake.ingredients[index].name;
       currentCake.ingredients.splice(index, 1);
-      currentCake.recipe = currentCake.recipe.filter(r => r.name !== ingredient.name);
+      // Remove from recipe if used
+      currentCake.recipe = currentCake.recipe.filter(r => r.name !== ingName);
       saveCake();
 
+      updateIngredientTable();
       updateIngredientDropdown();
-      renderIngredientTable();
       renderRecipeTable();
     }
 
-    function updateIngredientDropdown() {
-      const dropdown = document.getElementById('recipeIngredient');
-      dropdown.innerHTML = currentCake.ingredients.map(i => `<option>${i.name}</option>`).join('');
-    }
-
-    function renderIngredientTable() {
-      let existing = document.getElementById('ingredientTableContainer');
-      if (!existing) {
-        const container = document.createElement('div');
-        container.id = 'ingredientTableContainer';
-        container.className = 'mt-6';
-        container.innerHTML = `
-          <h3 class="text-lg font-semibold mb-2">Ingredients List</h3>
-          <table class="w-full border-collapse text-sm">
-            <thead class="bg-gray-100">
-              <tr>
-                <th class="border p-2 text-left">Name</th>
-                <th class="border p-2 text-left">Cost per Unit</th>
-                <th class="border p-2 text-left">Unit</th>
-                <th class="border p-2 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="ingredientTableBody"></tbody>
-          </table>
-        `;
-        document.querySelector('.mb-8').appendChild(container);
-      }
-
+    function updateIngredientTable() {
       const tbody = document.getElementById('ingredientTableBody');
       tbody.innerHTML = currentCake.ingredients.map((i, index) => `
         <tr>
           <td class="border p-2">${i.name}</td>
           <td class="border p-2">$${i.cost.toFixed(2)}</td>
           <td class="border p-2">${i.unit}</td>
-          <td class="border p-2 text-center">
+          <td class="border p-2 text-right space-x-2">
+            <button onclick="openEditModal && openEditModal(${index})" class="text-blue-600 hover:text-blue-800 mr-2">✏️</button>
             <button onclick="removeIngredient(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
           </td>
         </tr>
       `).join('');
     }
 
-    // 🍰 RECIPE FUNCTIONS
+    // ---------- RECIPE MANAGEMENT ----------
+    function updateIngredientDropdown() {
+      const dropdown = document.getElementById('recipeIngredient');
+      dropdown.innerHTML = currentCake.ingredients.map(i => `<option>${i.name}</option>`).join('');
+    }
+
     function addToRecipe() {
       const name = document.getElementById('recipeIngredient').value;
       const qty = parseFloat(document.getElementById('recipeQuantity').value);
@@ -175,7 +198,25 @@
       const ingredient = currentCake.ingredients.find(i => i.name === name);
       if (!ingredient) return;
 
-      const cost = ingredient.cost * qty;
+      // --- New unit-aware cost calculation ---
+      // If ingredient.unit contains a numeric amount (e.g. "100g", "1kg", "250 ml"),
+      // we compute: cost = (quantityUsed / unitAmount) * costPerUnit
+      // If ingredient.unit is non-numeric (e.g. "egg"), compute cost = qty * costPerUnit
+      const parsed = parseUnitString(ingredient.unit);
+      let cost;
+      if (parsed && parsed.amount > 0) {
+        // parsed.amount is in base units (grams or ml) OR a unit-count (if measure is null)
+        // We assume the user-entered quantity is in the *same* base as the unit's measure.
+        // Example: ingredient.unit = "100g", parsed.amount = 100; if qty=50 (grams), cost = (50/100)*price
+        cost = (qty / parsed.amount) * ingredient.cost;
+      } else {
+        // No numeric unit found — treat cost as "per single unit"
+        cost = qty * ingredient.cost;
+      }
+
+      // Guard against NaN / negative
+      if (!isFinite(cost) || cost < 0) cost = 0;
+
       currentCake.recipe.push({ name, qty, cost });
       saveCake();
       renderRecipeTable();
@@ -190,41 +231,4 @@
         const unit = ingredient ? ingredient.unit : '';
         return `
           <tr>
-            <td class="border p-2">${r.name}</td>
-            <td class="border p-2">${r.qty} × ${unit}</td>
-            <td class="border p-2 text-right">$${r.cost.toFixed(2)}</td>
-            <td class="border p-2 text-center">
-              <button onclick="removeRecipeItem(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      updateTotalCost();
-    }
-
-    function removeRecipeItem(index) {
-      if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
-        currentCake.recipe.splice(index, 1);
-        saveCake();
-        renderRecipeTable();
-      }
-    }
-
-    function updateTotalCost() {
-      const total = currentCake.recipe.reduce((sum, i) => sum + i.cost, 0);
-      document.getElementById('totalCost').textContent = total.toFixed(2);
-    }
-
-    function saveAndReturn() {
-      saveCake();
-      window.location.href = 'index.html';
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      updateIngredientDropdown();
-      renderIngredientTable();
-      renderRecipeTable();
-    });
-  </script>
-</body>
-</html>
+            <td class="border p-2">${r.name}<
