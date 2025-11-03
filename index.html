@@ -73,48 +73,68 @@
   </div>
 
   <script>
-    const ingredients = [];
-    const recipe = [];
+  let ingredients = JSON.parse(localStorage.getItem('ingredients')) || [];
+  let recipe = JSON.parse(localStorage.getItem('recipe')) || [];
 
-    function addIngredient() {
-      const name = document.getElementById('ingredientName').value;
-      const cost = parseFloat(document.getElementById('ingredientCost').value);
-      const unit = document.getElementById('ingredientUnit').value;
+  function saveData() {
+    localStorage.setItem('ingredients', JSON.stringify(ingredients));
+    localStorage.setItem('recipe', JSON.stringify(recipe));
+  }
 
-      if (!name || !cost || !unit) return alert('Please fill all fields.');
+  function addIngredient() {
+    const name = document.getElementById('ingredientName').value;
+    const cost = parseFloat(document.getElementById('ingredientCost').value);
+    const unit = document.getElementById('ingredientUnit').value;
 
-      ingredients.push({ name, cost, unit });
-      updateIngredientDropdown();
-      document.getElementById('ingredientName').value = '';
-      document.getElementById('ingredientCost').value = '';
-      document.getElementById('ingredientUnit').value = '';
-    }
+    if (!name || !cost || !unit) return alert('Please fill all fields.');
 
-    function updateIngredientDropdown() {
-      const dropdown = document.getElementById('recipeIngredient');
-      dropdown.innerHTML = ingredients.map(i => `<option>${i.name}</option>`).join('');
-    }
+    ingredients.push({ name, cost, unit });
+    updateIngredientDropdown();
+    saveData();
 
-    function addToRecipe() {
-      const name = document.getElementById('recipeIngredient').value;
-      const qty = parseFloat(document.getElementById('recipeQuantity').value);
-      if (!name || !qty) return alert('Select ingredient and quantity.');
+    document.getElementById('ingredientName').value = '';
+    document.getElementById('ingredientCost').value = '';
+    document.getElementById('ingredientUnit').value = '';
+  }
 
-      const ingredient = ingredients.find(i => i.name === name);
-      const cost = ingredient.cost * qty;
-      recipe.push({ name, qty, cost });
+  function updateIngredientDropdown() {
+    const dropdown = document.getElementById('recipeIngredient');
+    dropdown.innerHTML = ingredients.map(i => `<option>${i.name}</option>`).join('');
+  }
 
-      const table = document.querySelector('#recipeTable tbody');
-      const row = `<tr><td>${name}</td><td>${qty} × ${ingredient.unit}</td><td>$${cost.toFixed(2)}</td></tr>`;
-      table.insertAdjacentHTML('beforeend', row);
+  function addToRecipe() {
+    const name = document.getElementById('recipeIngredient').value;
+    const qty = parseFloat(document.getElementById('recipeQuantity').value);
+    if (!name || !qty) return alert('Select ingredient and quantity.');
 
-      updateTotalCost();
-    }
+    const ingredient = ingredients.find(i => i.name === name);
+    const cost = ingredient.cost * qty;
+    recipe.push({ name, qty, cost });
+    saveData();
 
-    function updateTotalCost() {
-      const total = recipe.reduce((sum, i) => sum + i.cost, 0);
-      document.getElementById('totalCost').innerText = total.toFixed(2);
-    }
-  </script>
+    renderRecipeTable();
+  }
+
+  function renderRecipeTable() {
+    const table = document.querySelector('#recipeTable tbody');
+    table.innerHTML = recipe
+      .map(r => `<tr><td>${r.name}</td><td>${r.qty} × ${ingredients.find(i => i.name === r.name).unit}</td><td>$${r.cost.toFixed(2)}</td></tr>`)
+      .join('');
+    updateTotalCost();
+  }
+
+  function updateTotalCost() {
+    const total = recipe.reduce((sum, i) => sum + i.cost, 0);
+    document.getElementById('totalCost').innerText = total.toFixed(2);
+  }
+
+  // Load saved data on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    updateIngredientDropdown();
+    renderRecipeTable();
+  });
+</script>
+
 </body>
 </html>
+
