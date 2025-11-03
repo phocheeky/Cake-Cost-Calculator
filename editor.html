@@ -57,16 +57,26 @@
     Version: <span id="version-number">Loading...</span>
   </footer>
 
+  <!-- ✏️ Edit Ingredient Modal -->
+  <div id="editModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-80">
+      <h2 class="text-lg font-semibold mb-4 text-orange-600">Edit Ingredient</h2>
+      <input id="editName" placeholder="Ingredient name" class="border rounded-lg w-full p-2 mb-2" />
+      <input id="editCost" type="number" step="0.01" placeholder="Cost per unit ($)" class="border rounded-lg w-full p-2 mb-2" />
+      <input id="editUnit" placeholder="Unit (e.g. 100g, egg)" class="border rounded-lg w-full p-2 mb-4" />
+      <div class="flex justify-between">
+        <button onclick="saveEdit()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Save</button>
+        <button onclick="closeModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // 🧾 Version fetcher (gracefully fallback)
+    // 🧾 Version fetcher
     fetch('version.txt')
-      .then(response => response.ok ? response.text() : Promise.reject())
-      .then(data => {
-        document.getElementById('version-number').textContent = data.trim();
-      })
-      .catch(() => {
-        document.getElementById('version-number').textContent = '1.0.0';
-      });
+      .then(response => response.text())
+      .then(data => { document.getElementById('version-number').textContent = data.trim(); })
+      .catch(() => { document.getElementById('version-number').textContent = 'unknown'; });
 
     // 🍰 Data setup
     let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
@@ -128,6 +138,34 @@
       renderRecipeTable();
     }
 
+    // ✏️ Edit Ingredient
+    let editIndex = null;
+    function openEditModal(index) {
+      editIndex = index;
+      const ing = currentCake.ingredients[index];
+      document.getElementById('editName').value = ing.name;
+      document.getElementById('editCost').value = ing.cost;
+      document.getElementById('editUnit').value = ing.unit;
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    function saveEdit() {
+      const name = document.getElementById('editName').value.trim();
+      const cost = parseFloat(document.getElementById('editCost').value);
+      const unit = document.getElementById('editUnit').value.trim();
+      if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
+
+      currentCake.ingredients[editIndex] = { name, cost, unit };
+      saveCake();
+      renderIngredientTable();
+      updateIngredientDropdown();
+      closeModal();
+    }
+
     function updateIngredientDropdown() {
       const dropdown = document.getElementById('recipeIngredient');
       dropdown.innerHTML = currentCake.ingredients.map(i => `<option>${i.name}</option>`).join('');
@@ -163,6 +201,7 @@
           <td class="border p-2">$${i.cost.toFixed(2)}</td>
           <td class="border p-2">${i.unit}</td>
           <td class="border p-2 text-center">
+            <button onclick="openEditModal(${index})" class="text-blue-500 hover:text-blue-700 mr-2">✏️</button>
             <button onclick="removeIngredient(${index})" class="text-red-500 hover:text-red-700">🗑️</button>
           </td>
         </tr>
@@ -178,8 +217,7 @@
       const ingredient = currentCake.ingredients.find(i => i.name === name);
       if (!ingredient) return;
 
-      // 🧮 Corrected cost formula
-      const unitValue = parseFloat(ingredient.unit); // try to get numeric part
+      const unitValue = parseFloat(ingredient.unit);
       let cost;
       if (!isNaN(unitValue) && unitValue > 0 && qty < unitValue) {
         cost = (qty / unitValue) * ingredient.cost;
@@ -190,16 +228,7 @@
       currentCake.recipe.push({ name, qty, cost });
       saveCake();
       renderRecipeTable();
-
       document.getElementById('recipeQuantity').value = '';
-    }
-
-    function removeRecipeItem(index) {
-      if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
-        currentCake.recipe.splice(index, 1);
-        saveCake();
-        renderRecipeTable();
-      }
     }
 
     function renderRecipeTable() {
@@ -219,6 +248,14 @@
         `;
       }).join('');
       updateTotalCost();
+    }
+
+    function removeRecipeItem(index) {
+      if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
+        currentCake.recipe.splice(index, 1);
+        saveCake();
+        renderRecipeTable();
+      }
     }
 
     function updateTotalCost() {
