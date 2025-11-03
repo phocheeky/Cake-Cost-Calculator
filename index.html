@@ -3,159 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cake Cost Calculator</title>
+  <title>Cake Overview</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-orange-50 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
 
-  <h1 class="text-3xl font-bold text-orange-600 mb-8 text-center">🎂 Cake Cost Calculator</h1>
+  <h1 class="text-3xl font-bold text-orange-600 mb-6 text-center">🎂 My Cakes</h1>
 
-  <div class="w-full max-w-xl space-y-8">
-
-    <!-- Add Ingredient Card -->
-    <div class="bg-white shadow-md rounded-2xl p-6">
-      <h2 class="text-xl font-semibold mb-4">Add Ingredient</h2>
-
-      <label class="block mb-3">
-        <span class="text-sm text-gray-700">Name</span>
-        <input id="ingredientName" type="text" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. Flour" />
-      </label>
-
-      <label class="block mb-3">
-        <span class="text-sm text-gray-700">Cost per unit ($)</span>
-        <input id="ingredientCost" type="number" step="0.01" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. 2.50" />
-      </label>
-
-      <label class="block mb-3">
-        <span class="text-sm text-gray-700">Unit (e.g. 100g, egg)</span>
-        <input id="ingredientUnit" type="text" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. per 100g" />
-      </label>
-
-      <button onclick="addIngredient()" class="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition">
-        ➕ Add Ingredient
+  <div class="w-full max-w-xl bg-white shadow-md rounded-2xl p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold">Saved Cakes</h2>
+      <button onclick="addNewCake()" class="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition">
+        ➕ New Cake
       </button>
     </div>
 
-    <!-- Recipe Card -->
-    <div class="bg-white shadow-md rounded-2xl p-6">
-      <h2 class="text-xl font-semibold mb-4">Recipe</h2>
+    <div id="cakeList" class="space-y-2"></div>
 
-      <label class="block mb-3">
-        <span class="text-sm text-gray-700">Ingredient</span>
-        <select id="recipeIngredient" class="mt-1 w-full border rounded-lg p-2"></select>
-      </label>
-
-      <label class="block mb-3">
-        <span class="text-sm text-gray-700">Quantity used</span>
-        <input id="recipeQuantity" type="number" step="0.01" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. 2" />
-      </label>
-
-      <button onclick="addToRecipe()" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">
-        ➕ Add to Recipe
-      </button>
-
-      <table class="w-full mt-6 border-collapse text-sm">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="border p-2 text-left">Ingredient</th>
-            <th class="border p-2 text-left">Quantity</th>
-            <th class="border p-2 text-right">Cost</th>
-          </tr>
-        </thead>
-        <tbody id="recipeTableBody"></tbody>
-      </table>
-
-      <h3 class="text-right text-lg font-semibold mt-4">
-        Total Cost: $<span id="totalCost">0.00</span>
-      </h3>
-    </div>
+    <p id="emptyMessage" class="text-gray-500 text-center mt-6">No cakes saved yet. Click “New Cake” to start!</p>
   </div>
 
   <script>
-    // --- LocalStorage Data Handling ---
-    let ingredients = JSON.parse(localStorage.getItem('ingredients')) || [];
-    let recipe = JSON.parse(localStorage.getItem('recipe')) || [];
+    let cakes = JSON.parse(localStorage.getItem('cakes')) || [];
 
-    function saveData() {
-      localStorage.setItem('ingredients', JSON.stringify(ingredients));
-      localStorage.setItem('recipe', JSON.stringify(recipe));
-    }
+    function renderCakeList() {
+      const list = document.getElementById('cakeList');
+      const emptyMsg = document.getElementById('emptyMessage');
+      list.innerHTML = '';
 
-    // --- Ingredient Management ---
-    function addIngredient() {
-      const name = document.getElementById('ingredientName').value.trim();
-      const cost = parseFloat(document.getElementById('ingredientCost').value);
-      const unit = document.getElementById('ingredientUnit').value.trim();
-
-      if (!name || !cost || !unit) {
-        alert('Please fill in all ingredient fields.');
+      if (cakes.length === 0) {
+        emptyMsg.classList.remove('hidden');
         return;
       }
+      emptyMsg.classList.add('hidden');
 
-      if (ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) {
-        alert('Ingredient already exists.');
-        return;
+      cakes.forEach((cake, index) => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between items-center border p-3 rounded-lg hover:bg-orange-50";
+
+        div.innerHTML = `
+          <span class="font-medium">${cake.name}</span>
+          <div class="space-x-2">
+            <button onclick="editCake(${index})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Edit</button>
+            <button onclick="deleteCake(${index})" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Delete</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function addNewCake() {
+      const name = prompt("Enter a name for your new cake:");
+      if (!name) return;
+      const newCake = { name, ingredients: [], recipe: [] };
+      cakes.push(newCake);
+      localStorage.setItem('cakes', JSON.stringify(cakes));
+
+      // Pass cake index to editor page
+      const index = cakes.length - 1;
+      window.location.href = `editor.html?cake=${index}`;
+    }
+
+    function editCake(index) {
+      window.location.href = `editor.html?cake=${index}`;
+    }
+
+    function deleteCake(index) {
+      if (confirm(`Delete "${cakes[index].name}"?`)) {
+        cakes.splice(index, 1);
+        localStorage.setItem('cakes', JSON.stringify(cakes));
+        renderCakeList();
       }
-
-      ingredients.push({ name, cost, unit });
-      saveData();
-      updateIngredientDropdown();
-
-      document.getElementById('ingredientName').value = '';
-      document.getElementById('ingredientCost').value = '';
-      document.getElementById('ingredientUnit').value = '';
     }
 
-    function updateIngredientDropdown() {
-      const dropdown = document.getElementById('recipeIngredient');
-      dropdown.innerHTML = ingredients.map(i => `<option>${i.name}</option>`).join('');
-    }
-
-    // --- Recipe Management ---
-    function addToRecipe() {
-      const name = document.getElementById('recipeIngredient').value;
-      const qty = parseFloat(document.getElementById('recipeQuantity').value);
-
-      if (!name || isNaN(qty) || qty <= 0) {
-        alert('Please select an ingredient and enter a valid quantity.');
-        return;
-      }
-
-      const ingredient = ingredients.find(i => i.name === name);
-      if (!ingredient) return;
-
-      const cost = ingredient.cost * qty;
-      recipe.push({ name, qty, cost });
-      saveData();
-      renderRecipeTable();
-      document.getElementById('recipeQuantity').value = '';
-    }
-
-    function renderRecipeTable() {
-      const tableBody = document.getElementById('recipeTableBody');
-      tableBody.innerHTML = recipe.map(r => {
-        const ingredient = ingredients.find(i => i.name === r.name);
-        const unitText = ingredient ? ingredient.unit : '';
-        return `
-          <tr>
-            <td class="border p-2">${r.name}</td>
-            <td class="border p-2">${r.qty} × ${unitText}</td>
-            <td class="border p-2 text-right">$${r.cost.toFixed(2)}</td>
-          </tr>`;
-      }).join('');
-      updateTotalCost();
-    }
-
-    function updateTotalCost() {
-      const total = recipe.reduce((sum, i) => sum + i.cost, 0);
-      document.getElementById('totalCost').innerText = total.toFixed(2);
-    }
-
-    // --- Load saved data on page load ---
-    window.addEventListener('DOMContentLoaded', () => {
-      updateIngredientDropdown();
-      renderRecipeTable();
-    });
+    renderCakeList();
   </script>
 
 </body>
