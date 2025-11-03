@@ -58,14 +58,14 @@
   </footer>
 
   <script>
-    // 🧾 Version fetcher
+    // 🧾 Version fetcher (gracefully fallback)
     fetch('version.txt')
-      .then(response => response.text())
+      .then(response => response.ok ? response.text() : Promise.reject())
       .then(data => {
         document.getElementById('version-number').textContent = data.trim();
       })
       .catch(() => {
-        document.getElementById('version-number').textContent = 'unknown';
+        document.getElementById('version-number').textContent = '1.0.0';
       });
 
     // 🍰 Data setup
@@ -79,6 +79,9 @@
     }
 
     let currentCake = cakes[cakeIndex];
+    if (!currentCake.ingredients) currentCake.ingredients = [];
+    if (!currentCake.recipe) currentCake.recipe = [];
+
     document.getElementById('cakeTitle').textContent = currentCake.name;
 
     function goBack() {
@@ -175,12 +178,28 @@
       const ingredient = currentCake.ingredients.find(i => i.name === name);
       if (!ingredient) return;
 
-      const cost = ingredient.cost * qty;
+      // 🧮 Corrected cost formula
+      const unitValue = parseFloat(ingredient.unit); // try to get numeric part
+      let cost;
+      if (!isNaN(unitValue) && unitValue > 0 && qty < unitValue) {
+        cost = (qty / unitValue) * ingredient.cost;
+      } else {
+        cost = ingredient.cost * qty;
+      }
+
       currentCake.recipe.push({ name, qty, cost });
       saveCake();
       renderRecipeTable();
 
       document.getElementById('recipeQuantity').value = '';
+    }
+
+    function removeRecipeItem(index) {
+      if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
+        currentCake.recipe.splice(index, 1);
+        saveCake();
+        renderRecipeTable();
+      }
     }
 
     function renderRecipeTable() {
@@ -200,14 +219,6 @@
         `;
       }).join('');
       updateTotalCost();
-    }
-
-    function removeRecipeItem(index) {
-      if (confirm(`Remove "${currentCake.recipe[index].name}" from recipe?`)) {
-        currentCake.recipe.splice(index, 1);
-        saveCake();
-        renderRecipeTable();
-      }
     }
 
     function updateTotalCost() {
