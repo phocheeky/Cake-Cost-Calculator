@@ -19,7 +19,7 @@
       <h2 class="text-lg font-semibold mb-3">Add Ingredient</h2>
       <input id="ingredientName" placeholder="Ingredient name" class="border rounded-lg w-full p-2 mb-2" />
       <input id="ingredientCost" type="number" step="0.01" placeholder="Cost per unit ($)" class="border rounded-lg w-full p-2 mb-2" />
-      <input id="ingredientUnit" placeholder="Unit (e.g. 100g, egg)" class="border rounded-lg w-full p-2 mb-2" />
+      <input id="ingredientUnit" placeholder="Unit (e.g. 500g, egg)" class="border rounded-lg w-full p-2 mb-2" />
       <button onclick="addIngredient()" class="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition">Add Ingredient</button>
     </div>
 
@@ -63,7 +63,7 @@
       <h2 class="text-lg font-semibold mb-4 text-orange-600">Edit Ingredient</h2>
       <input id="editName" placeholder="Ingredient name" class="border rounded-lg w-full p-2 mb-2" />
       <input id="editCost" type="number" step="0.01" placeholder="Cost per unit ($)" class="border rounded-lg w-full p-2 mb-2" />
-      <input id="editUnit" placeholder="Unit (e.g. 100g, egg)" class="border rounded-lg w-full p-2 mb-4" />
+      <input id="editUnit" placeholder="Unit (e.g. 500g, egg)" class="border rounded-lg w-full p-2 mb-4" />
       <div class="flex justify-between">
         <button onclick="saveEdit()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Save</button>
         <button onclick="closeModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancel</button>
@@ -95,6 +95,16 @@
 
     function goBack() { window.location.href = 'index.html'; }
     function saveCake() { cakes[cakeIndex] = currentCake; localStorage.setItem('cakes', JSON.stringify(cakes)); }
+
+    // 🔹 Calculate cost safely
+    function calculateCost(ingredient, qty) {
+      let unitValue = parseFloat(ingredient.unit.replace(/[^\d.]/g, ''));
+      if (!isNaN(unitValue) && unitValue > 0) {
+        return (qty / unitValue) * ingredient.cost;
+      } else {
+        return ingredient.cost * qty;
+      }
+    }
 
     // 🧁 Ingredient Functions
     function addIngredient() {
@@ -146,18 +156,13 @@
       const unit = document.getElementById('editUnit').value.trim();
       if (!name || isNaN(cost) || !unit) return alert('Fill in all fields');
 
-      // Update ingredient
       currentCake.ingredients[editIndex] = { name, cost, unit };
 
-      // Recalculate recipe costs safely
+      // Update recipe costs
       currentCake.recipe = currentCake.recipe.map(r => {
         if (r.name === name) {
           const ingredient = currentCake.ingredients.find(i => i.name === r.name);
-          let unitValue = parseFloat(ingredient.unit.replace(/[^\d.]/g, ''));
-          if (isNaN(unitValue) || unitValue <= 0) unitValue = null;
-
-          let newCost = unitValue && r.qty < unitValue ? (r.qty / unitValue) * ingredient.cost : ingredient.cost * r.qty;
-          return { ...r, cost: newCost };
+          return { ...r, cost: calculateCost(ingredient, r.qty) };
         }
         return r;
       });
@@ -220,9 +225,7 @@
       const ingredient = currentCake.ingredients.find(i => i.name === name);
       if (!ingredient) return;
 
-      let unitValue = parseFloat(ingredient.unit.replace(/[^\d.]/g, ''));
-      if (isNaN(unitValue) || unitValue <= 0) unitValue = null;
-      const cost = unitValue && qty < unitValue ? (qty / unitValue) * ingredient.cost : ingredient.cost * qty;
+      const cost = calculateCost(ingredient, qty);
 
       currentCake.recipe.push({ name, qty, cost });
       saveCake();
