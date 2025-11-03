@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cake Cost Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fff8f3;
+      color: #333;
+      margin: 2rem;
+    }
+    h1 {
+      text-align: center;
+      color: #d2691e;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    label { display: block; margin-top: 0.5rem; }
+    input, select, button {
+      margin-top: 0.2rem;
+      padding: 0.5rem;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      margin-top: 1rem;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎂 Cake Cost Calculator</h1>
+
+  <div class="card">
+    <h2>Add Ingredient</h2>
+    <label>Name: <input type="text" id="ingredientName"></label>
+    <label>Cost per unit ($): <input type="number" id="ingredientCost" step="0.01"></label>
+    <label>Unit (e.g. 100g, egg): <input type="text" id="ingredientUnit"></label>
+    <button onclick="addIngredient()">Add Ingredient</button>
+  </div>
+
+  <div class="card">
+    <h2>Recipe</h2>
+    <label>Ingredient:
+      <select id="recipeIngredient"></select>
+    </label>
+    <label>Quantity used:
+      <input type="number" id="recipeQuantity" step="0.01">
+    </label>
+    <button onclick="addToRecipe()">Add to Recipe</button>
+
+    <table id="recipeTable">
+      <thead>
+        <tr><th>Ingredient</th><th>Quantity</th><th>Cost</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>Total Cost: $<span id="totalCost">0.00</span></h3>
+  </div>
+
+  <script>
+    const ingredients = [];
+    const recipe = [];
+
+    function addIngredient() {
+      const name = document.getElementById('ingredientName').value;
+      const cost = parseFloat(document.getElementById('ingredientCost').value);
+      const unit = document.getElementById('ingredientUnit').value;
+
+      if (!name || !cost || !unit) return alert('Please fill all fields.');
+
+      ingredients.push({ name, cost, unit });
+      updateIngredientDropdown();
+      document.getElementById('ingredientName').value = '';
+      document.getElementById('ingredientCost').value = '';
+      document.getElementById('ingredientUnit').value = '';
+    }
+
+    function updateIngredientDropdown() {
+      const dropdown = document.getElementById('recipeIngredient');
+      dropdown.innerHTML = ingredients.map(i => `<option>${i.name}</option>`).join('');
+    }
+
+    function addToRecipe() {
+      const name = document.getElementById('recipeIngredient').value;
+      const qty = parseFloat(document.getElementById('recipeQuantity').value);
+      if (!name || !qty) return alert('Select ingredient and quantity.');
+
+      const ingredient = ingredients.find(i => i.name === name);
+      const cost = ingredient.cost * qty;
+      recipe.push({ name, qty, cost });
+
+      const table = document.querySelector('#recipeTable tbody');
+      const row = `<tr><td>${name}</td><td>${qty} × ${ingredient.unit}</td><td>$${cost.toFixed(2)}</td></tr>`;
+      table.insertAdjacentHTML('beforeend', row);
+
+      updateTotalCost();
+    }
+
+    function updateTotalCost() {
+      const total = recipe.reduce((sum, i) => sum + i.cost, 0);
+      document.getElementById('totalCost').innerText = total.toFixed(2);
+    }
+  </script>
+</body>
+</html>
