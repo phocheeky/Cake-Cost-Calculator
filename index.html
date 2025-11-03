@@ -1,96 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cake Cost Calculator</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #fff8f3;
-      color: #333;
-      margin: 2rem;
-      max-width: 700px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    h1 {
-      text-align: center;
-      color: #d2691e;
-    }
-    .card {
-      background: white;
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    label { display: block; margin-top: 0.5rem; }
-    input, select, button {
-      margin-top: 0.3rem;
-      padding: 0.5rem;
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      background: #d2691e;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 0.8rem;
-    }
-    button:hover {
-      background: #b85e1a;
-    }
-    table {
-      width: 100%;
-      margin-top: 1rem;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 0.5rem;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    h3 {
-      text-align: right;
-    }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-orange-50 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
 
-  <h1>🎂 Cake Cost Calculator</h1>
+  <h1 class="text-3xl font-bold text-orange-600 mb-8 text-center">🎂 Cake Cost Calculator</h1>
 
-  <div class="card">
-    <h2>Add Ingredient</h2>
-    <label>Name: <input type="text" id="ingredientName"></label>
-    <label>Cost per unit ($): <input type="number" id="ingredientCost" step="0.01"></label>
-    <label>Unit (e.g. 100g, egg): <input type="text" id="ingredientUnit"></label>
-    <button onclick="addIngredient()">Add Ingredient</button>
-  </div>
+  <div class="w-full max-w-xl space-y-8">
 
-  <div class="card">
-    <h2>Recipe</h2>
-    <label>Ingredient:
-      <select id="recipeIngredient"></select>
-    </label>
-    <label>Quantity used:
-      <input type="number" id="recipeQuantity" step="0.01">
-    </label>
-    <button onclick="addToRecipe()">Add to Recipe</button>
+    <!-- Add Ingredient Card -->
+    <div class="bg-white shadow-md rounded-2xl p-6">
+      <h2 class="text-xl font-semibold mb-4">Add Ingredient</h2>
 
-    <table id="recipeTable">
-      <thead>
-        <tr><th>Ingredient</th><th>Quantity</th><th>Cost</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+      <label class="block mb-3">
+        <span class="text-sm text-gray-700">Name</span>
+        <input id="ingredientName" type="text" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. Flour" />
+      </label>
 
-    <h3>Total Cost: $<span id="totalCost">0.00</span></h3>
+      <label class="block mb-3">
+        <span class="text-sm text-gray-700">Cost per unit ($)</span>
+        <input id="ingredientCost" type="number" step="0.01" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. 2.50" />
+      </label>
+
+      <label class="block mb-3">
+        <span class="text-sm text-gray-700">Unit (e.g. 100g, egg)</span>
+        <input id="ingredientUnit" type="text" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. per 100g" />
+      </label>
+
+      <button onclick="addIngredient()" class="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition">
+        ➕ Add Ingredient
+      </button>
+    </div>
+
+    <!-- Recipe Card -->
+    <div class="bg-white shadow-md rounded-2xl p-6">
+      <h2 class="text-xl font-semibold mb-4">Recipe</h2>
+
+      <label class="block mb-3">
+        <span class="text-sm text-gray-700">Ingredient</span>
+        <select id="recipeIngredient" class="mt-1 w-full border rounded-lg p-2"></select>
+      </label>
+
+      <label class="block mb-3">
+        <span class="text-sm text-gray-700">Quantity used</span>
+        <input id="recipeQuantity" type="number" step="0.01" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. 2" />
+      </label>
+
+      <button onclick="addToRecipe()" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">
+        ➕ Add to Recipe
+      </button>
+
+      <table class="w-full mt-6 border-collapse text-sm">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border p-2 text-left">Ingredient</th>
+            <th class="border p-2 text-left">Quantity</th>
+            <th class="border p-2 text-right">Cost</th>
+          </tr>
+        </thead>
+        <tbody id="recipeTableBody"></tbody>
+      </table>
+
+      <h3 class="text-right text-lg font-semibold mt-4">
+        Total Cost: $<span id="totalCost">0.00</span>
+      </h3>
+    </div>
   </div>
 
   <script>
@@ -114,7 +92,6 @@
         return;
       }
 
-      // Prevent duplicate names
       if (ingredients.some(i => i.name.toLowerCase() === name.toLowerCase())) {
         alert('Ingredient already exists.');
         return;
@@ -155,15 +132,16 @@
     }
 
     function renderRecipeTable() {
-      const tableBody = document.querySelector('#recipeTable tbody');
+      const tableBody = document.getElementById('recipeTableBody');
       tableBody.innerHTML = recipe.map(r => {
         const ingredient = ingredients.find(i => i.name === r.name);
         const unitText = ingredient ? ingredient.unit : '';
-        return `<tr>
-                  <td>${r.name}</td>
-                  <td>${r.qty} × ${unitText}</td>
-                  <td>$${r.cost.toFixed(2)}</td>
-                </tr>`;
+        return `
+          <tr>
+            <td class="border p-2">${r.name}</td>
+            <td class="border p-2">${r.qty} × ${unitText}</td>
+            <td class="border p-2 text-right">$${r.cost.toFixed(2)}</td>
+          </tr>`;
       }).join('');
       updateTotalCost();
     }
